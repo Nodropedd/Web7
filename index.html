@@ -358,25 +358,37 @@
                 <!-- Map Image Column -->
                 <div class="lg:col-span-7 space-y-4">
                     <div class="relative group bg-black rounded-xl overflow-hidden border-2 border-slate-600 shadow-2xl">
-                        
-                        <!-- START: Real Image Map with Fallback (Updated URL) -->
+                        <!-- START: Your Image from PostImage -->
                         <img id="kingdom-map-image" 
-                             src="https://instasize.com/p/842a1a76c85451696075a8f96540d19c1f89d184175f51062ee4fc5f27299c70" 
+                             src="https://i.postimg.cc/QtCkjtz9/unnamed67.jpg" 
                              alt="The Continent of Grimar Map" 
-                             class="w-full h-auto object-cover" 
-                             onerror="this.onerror=null; this.alt='Image Failed to Load. Check CDN link.'; this.style.display='none'; document.getElementById('map-error-fallback').style.display='flex';"
+                             class="w-full h-auto object-contain min-h-[400px] bg-gradient-to-br from-slate-900 to-purple-900"
+                             onerror="this.onerror=null; this.src='https://i.imgur.com/6jKd3WQ.png'; this.alt='Fallback Map Image'; document.getElementById('map-error-fallback').style.display='flex';"
                         >
                         
                         <!-- Fallback Message -->
-                        <div id="map-error-fallback" style="display: none;" class="w-full h-96 flex items-center justify-center bg-red-900/50 text-red-300">
-                            <p class="text-center p-4">
-                                <i class="fas fa-exclamation-triangle mr-2"></i> Error loading map image. The CDN link might be expired or blocked.
-                            </p>
+                        <div id="map-error-fallback" style="display: none;" class="absolute inset-0 bg-gradient-to-br from-slate-900 to-purple-900 flex flex-col items-center justify-center p-6 text-center">
+                            <i class="fas fa-exclamation-triangle text-yellow-500 text-4xl mb-4"></i>
+                            <p class="text-xl font-bold text-white mb-2">Map Image Unavailable</p>
+                            <p class="text-gray-300 mb-4">The map image failed to load. Here's a placeholder instead.</p>
+                            <p class="text-xs text-gray-400">Trying alternative image source...</p>
                         </div>
-                        <!-- END: Real Image Map with Fallback -->
+                        <!-- END: Your Image from PostImage -->
                         
                         <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
                             <p class="text-center text-xs text-gray-300" data-key="map_img_caption">The Continent of Grimar - 124 Territories</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Map Legend/Controls -->
+                    <div class="bg-slate-800 p-4 rounded-lg border border-slate-700">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm text-gray-400">Map Status:</span>
+                            <span id="map-status" class="text-green-400 text-sm font-bold">✓ Loaded</span>
+                        </div>
+                        <div class="text-xs text-gray-500">
+                            <p>Your custom game map is now displayed!</p>
+                            <p class="mt-1 text-green-400"><i class="fas fa-check-circle mr-1"></i> Using PostImage URL: i.postimg.cc</p>
                         </div>
                     </div>
                 </div>
@@ -1060,7 +1072,7 @@
                 // Forum
                 forum_title: "Fórum da Comunidade",
                 forum_recent: "Feed Ao Vivo",
-                forum_rules_title: "Regras",
+                forum_rules_title: "Reglas",
                 forum_rule_1: "Seja respeitoso com outros heróis.",
                 forum_rule_2: "Não faça spam de poções.",
                 forum_rule_3: "Ajude os novatos com dicas."
@@ -1198,6 +1210,59 @@
         window.hidePetDetails = function() {
             document.getElementById('pet-detail-modal').classList.add('hidden');
         }
+
+        // --- Image Loading Handler ---
+        document.addEventListener('DOMContentLoaded', function() {
+            const mapImage = document.getElementById('kingdom-map-image');
+            const mapStatus = document.getElementById('map-status');
+            const mapFallback = document.getElementById('map-error-fallback');
+            
+            if (mapImage) {
+                // Set loading state
+                if (mapStatus) mapStatus.textContent = "⏳ Loading your map...";
+                
+                // Check if image loads successfully
+                mapImage.onload = function() {
+                    if (mapStatus) {
+                        mapStatus.textContent = "✓ Your Map Loaded";
+                        mapStatus.className = "text-green-400 text-sm font-bold";
+                    }
+                    if (mapFallback) mapFallback.style.display = 'none';
+                    console.log("Map image loaded successfully from PostImage");
+                };
+                
+                mapImage.onerror = function() {
+                    if (mapStatus) {
+                        mapStatus.textContent = "✗ Failed (Using Fallback)";
+                        mapStatus.className = "text-yellow-400 text-sm font-bold";
+                    }
+                    if (mapFallback) mapFallback.style.display = 'flex';
+                    
+                    console.warn("PostImage map failed, trying Imgur fallback...");
+                    
+                    // Try alternative image sources in sequence
+                    const fallbackImages = [
+                        'https://i.imgur.com/6jKd3WQ.png',
+                        'https://images.unsplash.com/photo-1519681393784-d120267933ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
+                    ];
+                    
+                    let currentIndex = 0;
+                    const tryNextImage = () => {
+                        if (currentIndex < fallbackImages.length) {
+                            this.src = fallbackImages[currentIndex];
+                            currentIndex++;
+                        }
+                    };
+                    
+                    // Try first fallback immediately
+                    setTimeout(tryNextImage, 100);
+                };
+                
+                // Preload the image
+                const img = new Image();
+                img.src = mapImage.src;
+            }
+        });
 
         // --- Initialization ---
         window.onload = function() {
