@@ -68,8 +68,10 @@
             onAuthStateChanged(auth, (user) => {
                 currentUser = user;
                 if (user) {
+                    // Display user ID only partially for privacy, but store full ID
+                    const displayUid = user.uid.length > 8 ? user.uid.substring(0, 4) + '...' + user.uid.substring(user.uid.length - 4) : user.uid;
                     if (statusSpan) {
-                        statusSpan.innerText = "Online (UID: " + user.uid.substring(0, 4) + "...)";
+                        statusSpan.innerText = "Online (UID: " + displayUid + ")";
                         statusSpan.classList.add('text-green-400');
                     }
                     loadForumPosts();
@@ -272,22 +274,36 @@
         .legendary-gradient {
             background: linear-gradient(135deg, #713f12 0%, #ca8a04 100%);
         }
-        .map-icon {
-            display: inline-flex;
-            width: 24px;
-            height: 24px;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-            margin-right: 8px;
+        /* Custom colors for pet rarity */
+        .rarity-Common { background: #374151; border-color: #4b5563; }
+        .rarity-Uncommon { background: #166534; border-color: #4ade80; }
+        .rarity-Epic { background: #1e40af; border-color: #60a5fa; }
+        .rarity-Mythic { background: #581c87; border-color: #a855f7; }
+        .rarity-Demoniac { background: #991b1b; border-color: #ef4444; }
+        .rarity-Divine { background: #a16207; border-color: #fde047; }
+        .rarity-Primordial { background: #831843; border-color: #f472b6; }
+
+        .rarity-Common-text { color: #d1d5db; }
+        .rarity-Uncommon-text { color: #4ade80; }
+        .rarity-Epic-text { color: #60a5fa; }
+        .rarity-Mythic-text { color: #a855f7; }
+        .rarity-Demoniac-text { color: #ef4444; }
+        .rarity-Divine-text { color: #fde047; }
+        .rarity-Primordial-text { color: #f472b6; }
+
+        /* Pet Details Modal Styling */
+        #pet-detail-modal {
+            transition: opacity 0.3s, transform 0.3s;
         }
-        /* Fade in for forum posts */
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-in;
+        #pet-detail-modal.hidden {
+            opacity: 0;
+            transform: scale(0.9);
+            pointer-events: none;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        #pet-detail-modal:not(.hidden) {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
         }
     </style>
 </head>
@@ -319,6 +335,7 @@
             <div class="container mx-auto flex px-2 text-xs md:text-sm font-bold uppercase tracking-wide whitespace-nowrap">
                 <button onclick="showSection('map')" class="nav-item active flex-1 md:flex-none px-6 py-3 hover:bg-slate-700 transition" data-key="nav_map"><i class="fas fa-map mr-2"></i>Map</button>
                 <button onclick="showSection('mounts')" class="nav-item flex-1 md:flex-none px-6 py-3 hover:bg-slate-700 transition" data-key="nav_mounts"><i class="fas fa-chess-knight mr-2"></i>Mounts</button>
+                <button onclick="showSection('pets')" class="nav-item flex-1 md:flex-none px-6 py-3 hover:bg-slate-700 transition" data-key="nav_pets"><i class="fas fa-paw mr-2"></i>Pets</button>
                 <button onclick="showSection('boss')" class="nav-item flex-1 md:flex-none px-6 py-3 hover:bg-slate-700 transition" data-key="nav_boss"><i class="fas fa-skull-crossbones mr-2"></i>Boss</button>
                 <button onclick="showSection('expeditions')" class="nav-item flex-1 md:flex-none px-6 py-3 hover:bg-slate-700 transition" data-key="nav_expeditions"><i class="fas fa-compass mr-2"></i>Expeditions</button>
                 <button onclick="showSection('medal')" class="nav-item flex-1 md:flex-none px-6 py-3 hover:bg-slate-700 transition" data-key="nav_medal"><i class="fas fa-medal mr-2"></i>Honor</button>
@@ -342,9 +359,9 @@
                 <div class="lg:col-span-7 space-y-4">
                     <div class="relative group bg-black rounded-xl overflow-hidden border-2 border-slate-600 shadow-2xl">
                         
-                        <!-- START: Real Image Map with Fallback (from user-provided URL) -->
+                        <!-- START: Real Image Map with Fallback (Updated URL) -->
                         <img id="kingdom-map-image" 
-                             src="https://cdn.discordapp.com/attachments/1356984438541521097/1356984439753937026/MapaDoreino.jpg?ex=693581bd&is=6934303d&hm=81fd3e5b42b2f79705a8d4e10c3389ba6c08334423a226d4d8c267445ec35ce2&" 
+                             src="https://instasize.com/p/842a1a76c85451696075a8f96540d19c1f89d184175f51062ee4fc5f27299c70" 
                              alt="The Continent of Grimar Map" 
                              class="w-full h-auto object-cover" 
                              onerror="this.onerror=null; this.alt='Image Failed to Load. Check CDN link.'; this.style.display='none'; document.getElementById('map-error-fallback').style.display='flex';"
@@ -452,6 +469,19 @@
             </div>
         </div>
 
+        <!-- Pets Section (NEW) -->
+        <div id="section-pets" class="section-content">
+            <h2 class="text-2xl text-pink-400 mb-6 border-b border-gray-700 pb-2 pixel-font" data-key="pets_title">Pets</h2>
+            
+            <p class="mb-6 text-gray-300 text-sm bg-slate-800 p-3 rounded border-l-4 border-pink-500" data-key="pets_intro">
+                Pets grant powerful passive abilities and significant stat bonuses, becoming essential companions in PVP. Click a pet's name for details.
+            </p>
+
+            <div id="pets-container" class="space-y-8">
+                <!-- Pets populated by JS here -->
+            </div>
+        </div>
+        
         <!-- World Boss Section -->
         <div id="section-boss" class="section-content">
             <div class="flex items-center justify-between mb-6">
@@ -737,6 +767,39 @@
         <p>Hero Hero Clicker Fan Wiki. Content &copy; 2025.</p>
     </footer>
 
+    <!-- Pet Detail Modal/Tooltip (Hidden by Default) -->
+    <div id="pet-detail-modal" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-11/12 max-w-sm hidden" onclick="hidePetDetails()">
+        <div class="bg-slate-900 p-6 rounded-xl border-4 shadow-2xl relative border-pink-500/50">
+            <button class="absolute top-2 right-2 text-gray-400 hover:text-white transition" onclick="hidePetDetails()">
+                <i class="fas fa-times-circle text-xl"></i>
+            </button>
+            <div class="text-center mb-4">
+                <i id="pet-modal-icon" class="text-4xl mb-2"></i>
+                <h3 id="pet-modal-name" class="text-2xl font-bold"></h3>
+                <span id="pet-modal-rarity" class="inline-block px-3 py-1 text-xs font-mono rounded-full mt-1 uppercase font-bold"></span>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="bg-slate-800 p-3 rounded border border-slate-700">
+                    <p class="text-sm font-bold text-yellow-400 flex items-center mb-1"><i class="fas fa-bolt mr-2"></i> <span id="pet-modal-passive"></span></p>
+                    <p id="pet-modal-desc" class="text-xs text-gray-300"></p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3 text-center text-xs bg-slate-800 p-3 rounded border border-slate-700">
+                    <div>
+                        <p class="text-gray-400 font-bold mb-1">Level 25 Bonus</p>
+                        <p id="pet-modal-lvl25" class="font-mono text-green-400"></p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 font-bold mb-1">Level 50 Bonus</p>
+                        <p id="pet-modal-lvl50" class="font-mono text-cyan-400"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Translations & Logic -->
     <script>
         // Mount Data
@@ -756,10 +819,69 @@
             { name: "Monarch", rarity: "legendary", cost: "12,000 Coins" }
         ];
 
+        // PET DATA (New)
+        const petsData = [
+            // Common
+            { name: "BLUSHY", rarity: "Common", passive: "Determination", passive_desc: "Whenever you Staunch a Bleeding, your HP Regen increases by 10%.", lvl25: "+1% Staunch", lvl50: "+100 HP Regen", icon: "fas fa-heart" },
+            { name: "WORM", rarity: "Common", passive: "Bite", passive_desc: "Increases the chance to apply Bleeding by 5%.", lvl25: "+1% Apply Bleeding", lvl50: "+3% Apply Bleeding", icon: "fas fa-worm" },
+            { name: "JELLY-FISH", rarity: "Common", passive: "Controlled Flow", passive_desc: "Increases Staunch by 5%.", lvl25: "+1% Staunch", lvl50: "+3% Staunch", icon: "fas fa-water" },
+            { name: "SHELDON", rarity: "Common", passive: "Protector", passive_desc: "Increases Defense by 5%", lvl25: "+1% Defense", lvl50: "+3% Defense", icon: "fas fa-shield-alt" },
+            { name: "OCTOPUSY", rarity: "Common", passive: "Sturdy", passive_desc: "Increases max HP by 5%.", lvl25: "+200 HP", lvl50: "+600 HP", icon: "fas fa-bahai" },
+            { name: "BAIACUZIN", rarity: "Common", passive: "Swollen", passive_desc: "Increases HP Regen by 20%.", lvl25: "+20 HP Regen", lvl50: "+100 HP Regen", icon: "fas fa-lungs" },
+            { name: "APPA", rarity: "Common", passive: "Untouchable", passive_desc: "Increases Dodge by 5%", lvl25: "+1% Dodge", lvl50: "+2% Dodge", icon: "fas fa-wind" },
+            // Uncommon
+            { name: "IRS", rarity: "Uncommon", passive: "Income Tax", passive_desc: "When winning a PVP battle, there's a 10% chance to gain 20 Gold Coins and a 1% chance to gain 100 Gold Coins.", lvl25: "+40 HP Regen", lvl50: "+700 HP", icon: "fas fa-sack-dollar" },
+            { name: "ADHD", rarity: "Uncommon", passive: "One Neuron", passive_desc: "If HP is below 50%, gain +10% Crit Chance for 5 turns.", lvl25: "+10 Min Damage", lvl50: "+2% Crit Chance", icon: "fas fa-brain" },
+            { name: "CHOMPY", rarity: "Uncommon", passive: "Headbutt", passive_desc: "Increases the hero's Counter-Attack by 5%.", lvl25: "+2% Counter-Attack", lvl50: "+3% Counter-Attack", icon: "fas fa-tooth" },
+            { name: "DEVIMON", rarity: "Uncommon", passive: "Reckless Vitality", passive_desc: "Increases HP Regen by 40%, but you can no longer Defend.", lvl25: "+1.5% Dodge", lvl50: "+2% Crit Chance", icon: "fas fa-fire-alt" },
+            { name: "CACTURINO", rarity: "Uncommon", passive: "Earth's Breath", passive_desc: "If HP is below 25%, gain +25% Staunch.", lvl25: "+2% Staunch", lvl50: "+150 HP Regen", icon: "fas fa-cactus" },
+            { name: "PARMALAT", rarity: "Uncommon", passive: "Lazy", passive_desc: "Increases Hp by 40%, but you can no longer Dodge.", lvl25: "+300 HP", lvl50: "+900 HP", icon: "fas fa-bed" },
+            { name: "TRAP", rarity: "Uncommon", passive: "Bleeding", passive_desc: "Crit Attacks have an additional 15% chance to apply Bleeding.", lvl25: "+1% Crit Chance", lvl50: "+0.1 Crit Damage", icon: "fas fa-flask" },
+            // Epic
+            { name: "GHASLY", rarity: "Epic", passive: "Mirror", passive_desc: "Whenever you Defend, reflect 100% of the Damage received.", lvl25: "+15 Max Damage", lvl50: "+3% Defense", icon: "fas fa-ghost" },
+            { name: "GEOFIRE", rarity: "Epic", passive: "Boulder", passive_desc: "Your 4th attack has a 20% chance to apply Burn (Burn reduces all healing by 50%).", lvl25: "+3% Counter-Attack", lvl50: "+5% Staunch", icon: "fas fa-globe-europe" },
+            { name: "MAMACITO", rarity: "Epic", passive: "Furious", passive_desc: "For each attack in sequence, Crit Chance increases by 2%.", lvl25: "+2% Dodge", lvl50: "+15 Max Damage", icon: "fas fa-mask" },
+            { name: "PELUCITO", rarity: "Epic", passive: "Patchwork", passive_desc: "Whenever you Defend, recover between 3% and 5% of your HP.", lvl25: "+2% Defense", lvl50: "+3.5% Defense", icon: "fas fa-socks" },
+            { name: "SWOIRD", rarity: "Epic", passive: "Butcher", passive_desc: "Increases the chance to apply Laceration by 1%.", lvl25: "+0.5% Laceration", lvl50: "+1% Laceration", icon: "fas fa-dagger" },
+            { name: "RIMURU", rarity: "Epic", passive: "Vital Touch", passive_desc: "Whenever performing any type of healing, increase that healing by 5%.", lvl25: "+60 HP Regen", lvl50: "+1.000 HP", icon: "fas fa-lungs" },
+            { name: "UNKNOWY", rarity: "Epic", passive: "Mimic", passive_desc: "When suffering Laceration, there's a 15% to 25% chance to reflect and apply Laceration to the enemy as well (Reflect does not Counter-Attack).", lvl25: "+2% Counter-Attack", lvl50: "+1% Laceration", icon: "fas fa-eye" },
+            // Mythic
+            { name: "CATYUUBI", rarity: "Mythic", passive: "Vampirism", passive_desc: "Whenever the enemy loses HP from Bleeding, you recover 20% of that value in HP.", lvl25: "+3% Apply Bleeding", lvl50: "+5% Apply Bleeding", icon: "fas fa-cat" },
+            { name: "GROOTY", rarity: "Mythic", passive: "Wall", passive_desc: "Whenever you Defend, your Defense increases by 2%.", lvl25: "+700 HP", lvl50: "+5% Defense", icon: "fas fa-tree" },
+            { name: "IGNASS", rarity: "Mythic", passive: "Explosion", passive_desc: "On the first attack of each turn, your Critical Chance increases by 20%.", lvl25: "+3% Crit Chance", lvl50: "+25 Max Damage", icon: "fas fa-meteor" },
+            { name: "FOOXY", rarity: "Mythic", passive: "Cold Analysis", passive_desc: "Increases the Damage of your next attack by 30% every time you Dodge.", lvl25: "+3% Dodge", lvl50: "+4% Crit Chance", icon: "fas fa-paw" },
+            { name: "GHOSTRING", rarity: "Mythic", passive: "Vanish", passive_desc: "Whenever you Dodge, your Dodge increases by 1%.", lvl25: "+3% Dodge", lvl50: "+3% Dodge", icon: "fas fa-ghost" },
+            { name: "REAPER", rarity: "Mythic", passive: "Drain", passive_desc: "Whenever you apply Bleeding, recover 20% of the Damage dealt.", lvl25: "+1% Laceration", lvl50: "+25 Max Damage", icon: "fas fa-scythe" },
+            // Demoniac
+            { name: "UMBREUN", rarity: "Demoniac", passive: "Relentless", passive_desc: "Whenever you Counter-Attack, your Critical Chance increases by 30%.", lvl25: "+5% Counter-Attack", lvl50: "+50 Min Damage", icon: "fas fa-fist-raised" },
+            { name: "DARKHOLDER", rarity: "Demoniac", passive: "Hostility", passive_desc: "For each Crit Attack, your Crit Damage increases by 10%.", lvl25: "+4% Crit Chance", lvl50: "+6% Crit Chance", icon: "fas fa-dragon" },
+            { name: "D.DRAGON", rarity: "Demoniac", passive: "Dragon Soul", passive_desc: "For every 20% of HP lost, your Damage increases by 10% but your Dodge decreases by 5%.", lvl25: "+50 Max Damage", lvl50: "+0.3 Crit Damage", icon: "fas fa-heart-crack" },
+            // Divine
+            { name: "ESPYON", rarity: "Divine", passive: "Sabotage", passive_desc: "When suffering Laceration, perform a Counter-Attack dealing 2x Damage and increase Crit Chance by 10%.", lvl25: "+5% Defense", lvl50: "+5% Dodge", icon: "fas fa-crown" },
+            { name: "SOLARION", rarity: "Divine", passive: "Laser Beam", passive_desc: "Whenever you apply Laceration, it deals Damage equal to 5% of the enemy's max HP and increases your chance to apply Laceration by 1%.", lvl25: "+5% Staunch", lvl50: "+3% Laceration", icon: "fas fa-sun" },
+            { name: "KIZARU", rarity: "Divine", passive: "Resurge", passive_desc: "When receiving Damage that would kill the hero, recover HP equal to the Damage received.", lvl25: "+1.500 HP", lvl50: "+5% Dodge", icon: "fas fa-bolt" },
+            // Primordial
+            { name: "FALLEN KING", rarity: "Primordial", passive: "Conqueror", passive_desc: "Now the Legendary Ability: Domain Expansion increases its effect by an additional 10%.", lvl25: "+2.500 HP", lvl50: "+100 Max Damage", icon: "fas fa-chess-king" },
+            { name: "BESTIAL", rarity: "Primordial", passive: "Savage Instinct", passive_desc: "Now the Legendary Ability: Kaioken lasts for 2 turns instead of 1 turn.", lvl25: "+5% Crit Chance", lvl50: "+7% Apply Bleeding", icon: "fas fa-fire-lightning" },
+            { name: "FOUNDING TITAN", rarity: "Primordial", passive: "Coordinate", passive_desc: "Now the Legendary Skill: Giant can deal Crit Damage.", lvl25: "+70 Max Damage", lvl50: "+70 Min Damage", icon: "fas fa-mountain" },
+            { name: "WEZAEMON", rarity: "Primordial", passive: "Unyielding Spirit", passive_desc: "Increases the Base Damage of the Legendary Ability: Mitsurugi-ryu by 15%, and its last attack has a 100% chance to apply Bleeding.", lvl25: "+2% Laceration", lvl50: "+7% Dodge", icon: "fas fa-swords" },
+        ];
+        
+        // Rarity classes map
+        const rarityClasses = {
+            "Common": { bg: "bg-gray-700/50 border-gray-600", text: "text-gray-300", icon: "text-gray-400" },
+            "Uncommon": { bg: "bg-green-800/50 border-green-600", text: "text-green-300", icon: "text-green-400" },
+            "Epic": { bg: "bg-blue-800/50 border-blue-600", text: "text-blue-300", icon: "text-blue-400" },
+            "Mythic": { bg: "bg-purple-800/50 border-purple-600", text: "text-purple-300", icon: "text-purple-400" },
+            "Demoniac": { bg: "bg-red-800/50 border-red-600", text: "text-red-300", icon: "text-red-400" },
+            "Divine": { bg: "bg-yellow-800/50 border-yellow-600", text: "text-yellow-300", icon: "text-yellow-400" },
+            "Primordial": { bg: "bg-pink-800/50 border-pink-600", text: "text-pink-300", icon: "text-pink-400" }
+        };
+
         // Dictionary
         const translations = {
             en: {
-                nav_map: "Map", nav_mounts: "Mounts", nav_boss: "World Boss", nav_expeditions: "Expeditions", nav_medal: "Honor",
+                nav_map: "Map", nav_mounts: "Mounts", nav_pets: "Pets", nav_boss: "World Boss", nav_expeditions: "Expeditions", nav_medal: "Honor",
                 
                 // Map
                 map_title: "Kingdom Map",
@@ -786,6 +908,10 @@
                 th_mount: "Mount", th_rarity: "Rarity", th_cost: "Cost/Method",
                 rarity_normal: "Normal", rarity_rare: "Rare", rarity_super_rare: "Super Rare", rarity_ultra_rare: "Ultra Rare", rarity_legendary: "Legendary",
 
+                // Pets (NEW)
+                pets_title: "Pets",
+                pets_intro: "Pets grant powerful passive abilities and significant stat bonuses, becoming essential companions in PVP. Click a pet's name for details.",
+                
                 // Boss
                 boss_title: "World Boss",
                 boss_schedule: "Schedule (UTC)",
@@ -818,7 +944,7 @@
                 forum_rule_3: "Help newbies with tips."
             },
             es: {
-                nav_map: "Mapa", nav_mounts: "Monturas", nav_boss: "Jefe Mundial", nav_expeditions: "Expediciones", nav_medal: "Honor",
+                nav_map: "Mapa", nav_mounts: "Monturas", nav_pets: "Mascotas", nav_boss: "Jefe Mundial", nav_expeditions: "Expediciones", nav_medal: "Honor",
                 
                 map_title: "Mapa del Reino",
                 map_req_tag: "Req: Día 1,000",
@@ -843,6 +969,11 @@
                 th_mount: "Montura", th_rarity: "Rareza", th_cost: "Costo/Método",
                 rarity_normal: "Normal", rarity_rare: "Raro", rarity_super_rare: "Super Raro", rarity_ultra_rare: "Ultra Raro", rarity_legendary: "Lendario",
 
+                // Pets (NEW)
+                pets_title: "Mascotas",
+                pets_intro: "Las mascotas otorgan poderosas habilidades pasivas y bonificaciones de estadísticas significativas, siendo compañeros esenciales en PVP. Haz clic en el nombre de una mascota para ver los detalles.",
+
+                // Boss
                 boss_title: "Jefe Mundial",
                 boss_schedule: "Horarios (UTC)",
                 day_tue: "Martes", day_thu: "Jueves", day_sat: "Sábado",
@@ -851,18 +982,21 @@
                 boss_mech_title: "Mecánica:", boss_mech_desc: "Daño = CP del Héroe. Mayor CP = Mejor Rango.",
                 boss_rewards: "Recompensas",
 
+                // Expeditions
                 expeditions_title: "Expediciones",
                 exp_intro_detail: "Deben desbloquearse en orden: <strong>Bosque -> Nieve -> Océano</strong>. Cada una desbloquea su 'Mejora de Lágrima' para todas las zonas.",
                 exp_forest: "Bosque", upgrade_forest: "Dos Días como Uno", upgrade_forest_desc: "Probabilidad de pasar 2 días en vez de 1.",
                 exp_snow: "Nieve", upgrade_snow: "Digestión Lenta", upgrade_snow_desc: "Aumenta la duración de objetos activos.",
                 exp_ocean: "Océano", upgrade_ocean: "Bayblade", upgrade_ocean_desc: "Hace % de Ataque como Daño en Área.",
 
+                // Medal
                 medal_title: "Medalla de Honor",
                 medal_concept: "Rango de Apoyo",
                 medal_desc: "Cada compra da <strong>Puntos de Honor</strong>. Sube 9 niveles para prestigio y premios.",
                 medal_levels: "Niveles de Honor",
                 medal_examples: "Valores de Puntos",
 
+                // Forum
                 forum_title: "Foro Comunidad",
                 forum_recent: "Chat en Vivo",
                 forum_rules_title: "Reglas",
@@ -871,7 +1005,7 @@
                 forum_rule_3: "Ayuda a los nuevos."
             },
             pt: {
-                nav_map: "Mapa", nav_mounts: "Montarias", nav_boss: "Chefe Mundial", nav_expeditions: "Expedições", nav_medal: "Honra",
+                nav_map: "Mapa", nav_mounts: "Montarias", nav_pets: "Pets", nav_boss: "Chefe Mundial", nav_expeditions: "Expedições", nav_medal: "Honra",
                 
                 map_title: "Mapa do Reino",
                 map_req_tag: "Req: Dia 1.000",
@@ -896,6 +1030,11 @@
                 th_mount: "Montaria", th_rarity: "Raridade", th_cost: "Custo/Método",
                 rarity_normal: "Normal", rarity_rare: "Raro", rarity_super_rare: "Super Raro", rarity_ultra_rare: "Ultra Raro", rarity_legendary: "Lendário",
 
+                // Pets (NEW)
+                pets_title: "Pets",
+                pets_intro: "Pets concedem poderosas habilidades passivas e bônus de status significativos, tornando-se companheiros essenciais no PVP. Clique no nome de um pet para ver os detalhes.",
+
+                // Boss
                 boss_title: "Chefe Mundial",
                 boss_schedule: "Horários (UTC)",
                 day_tue: "Terça-feira", day_thu: "Quinta-feira", day_sat: "Sábado",
@@ -904,18 +1043,21 @@
                 boss_mech_title: "Mecânica:", boss_mech_desc: "Dano = CP do Herói. CP mais alto = Melhor Rank.",
                 boss_rewards: "Recompensas",
 
+                // Expeditions
                 expeditions_title: "Expedições",
                 exp_intro_detail: "Devem ser desbloqueadas em ordem: <strong>Floresta -> Neve -> Oceano</strong>. Desbloquear uma nova expedição concede sua 'Melhoria de Lágrima' a todas as zonas anteriores.",
                 exp_forest: "Floresta", upgrade_forest: "Dois Dias como Um", upgrade_forest_desc: "Chance de avançar 2 dias em vez de 1.",
                 exp_snow: "Montanha de Neve", upgrade_snow: "Digestão Lenta", upgrade_snow_desc: "Aumenta a duração de itens ativos.",
                 exp_ocean: "Oceano", upgrade_ocean: "Bayblade", upgrade_ocean_desc: "Causa % de Ataque como Dano em Área.",
 
+                // Medal
                 medal_title: "Medalha de Honra",
                 medal_concept: "Rank de Apoiador",
                 medal_desc: "Cada compra concede <strong>Pontos de Honra</strong>. Subir os 9 níveis de honra concede prestígio e recompensas.",
                 medal_levels: "Níveis de Honra",
                 medal_examples: "Valores de Pontos",
 
+                // Forum
                 forum_title: "Fórum da Comunidade",
                 forum_recent: "Feed Ao Vivo",
                 forum_rules_title: "Regras",
@@ -928,7 +1070,7 @@
         // Current state
         let currentLang = 'en';
 
-        // --- Functions ---
+        // --- Core UI Functions ---
         function setLang(lang) {
             currentLang = lang;
             
@@ -944,8 +1086,9 @@
                 }
             });
 
-            // Re-render mounts
+            // Re-render sections
             renderMounts();
+            renderPets();
         }
 
         function showSection(sectionId) {
@@ -955,8 +1098,12 @@
 
             document.querySelectorAll('.section-content').forEach(div => div.classList.remove('active'));
             document.getElementById('section-' + sectionId).classList.add('active');
+            
+            // Hide the modal when switching sections
+            hidePetDetails();
         }
 
+        // --- Mounts Logic ---
         function renderMounts() {
             const tbody = document.getElementById('mounts-table-body');
             tbody.innerHTML = '';
@@ -982,12 +1129,93 @@
             });
         }
 
+        // --- Pets Logic (NEW) ---
+        function renderPets() {
+            const container = document.getElementById('pets-container');
+            if (!container) return;
+            container.innerHTML = '';
+            
+            const categories = petsData.reduce((acc, pet) => {
+                acc[pet.rarity] = acc[pet.rarity] || [];
+                acc[pet.rarity].push(pet);
+                return acc;
+            }, {});
+
+            Object.keys(categories).forEach(rarity => {
+                const rData = rarityClasses[rarity] || { bg: 'bg-slate-700/50 border-slate-600', text: 'text-gray-300', icon: 'text-gray-400' };
+                
+                const sectionHtml = `
+                    <div class="rarity-group p-4 rounded-xl border-t-4 ${rData.bg}">
+                        <h3 class="text-xl font-bold mb-4 ${rData.text} flex items-center"><i class="fas fa-certificate mr-3 ${rData.icon}"></i> ${rarity} Pets</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" id="pets-rarity-${rarity.replace(/\s/g, '-')}">
+                            <!-- Pet Cards will go here -->
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', sectionHtml);
+
+                const grid = document.getElementById(`pets-rarity-${rarity.replace(/\s/g, '-')}`);
+                categories[rarity].forEach(pet => {
+                    const cardHtml = `
+                        <div class="bg-slate-800 p-3 rounded-lg border ${rData.bg} shadow-md flex flex-col items-center justify-center hover:bg-slate-700 transition cursor-pointer" onclick="showPetDetails('${pet.name}')">
+                            <i class="${pet.icon} text-3xl mb-2 ${rData.icon}"></i>
+                            <h4 class="font-bold text-sm ${rData.text} text-center">${pet.name}</h4>
+                            <span class="text-[10px] text-gray-400">${pet.passive}</span>
+                        </div>
+                    `;
+                    grid.insertAdjacentHTML('beforeend', cardHtml);
+                });
+            });
+        }
+
+        window.showPetDetails = function(petName) {
+            const pet = petsData.find(p => p.name === petName);
+            if (!pet) return;
+
+            const modal = document.getElementById('pet-detail-modal');
+            const rData = rarityClasses[pet.rarity] || { bg: 'bg-slate-700/50 border-slate-600', text: 'text-gray-300', icon: 'text-gray-400' };
+
+            // Set content
+            document.getElementById('pet-modal-icon').className = `${pet.icon} text-4xl mb-2 ${rData.icon}`;
+            document.getElementById('pet-modal-name').innerText = pet.name;
+            
+            const raritySpan = document.getElementById('pet-modal-rarity');
+            raritySpan.innerText = pet.rarity;
+            raritySpan.className = `inline-block px-3 py-1 text-xs font-mono rounded-full mt-1 uppercase font-bold ${rData.bg} border ${rData.text}`;
+            
+            document.getElementById('pet-modal-passive').innerText = pet.passive;
+            document.getElementById('pet-modal-desc').innerHTML = pet.passive_desc;
+            document.getElementById('pet-modal-lvl25').innerText = pet.lvl25;
+            document.getElementById('pet-modal-lvl50').innerText = pet.lvl50;
+
+            // Apply specific border color to the modal
+            modal.querySelector('.bg-slate-900').style.borderColor = rData.text.replace('text-', '#').replace('-300', '500');
+
+            // Show modal
+            modal.classList.remove('hidden');
+        }
+
+        window.hidePetDetails = function() {
+            document.getElementById('pet-detail-modal').classList.add('hidden');
+        }
+
+        // --- Initialization ---
         window.onload = function() {
             setLang('en');
             renderMounts();
+            renderPets(); 
+            // Add global click listener to hide modal on outside click (optional)
+            document.addEventListener('click', (e) => {
+                const modal = document.getElementById('pet-detail-modal');
+                if (!modal.classList.contains('hidden')) {
+                    const modalContent = modal.querySelector('div');
+                    if (modalContent && !modalContent.contains(e.target) && !e.target.closest('.rarity-group')) {
+                        hidePetDetails();
+                    }
+                }
+            });
         };
 
     </script>
 </body>
 </html>
-
